@@ -12,8 +12,14 @@ sys.path.append("C:/Users/ricardo/Downloads/deltarice-master/deltarice-master/bu
 import nabPy as Nab
 import h5py
 
+'''
+Currently just trying to replicate the Basic.ipynb file to make sure
+everything works on this computer. Also to help learn the PyNab package,
+the methods available in it, and how to use it overall.
+'''
+
 # Load in data
-data = Nab.File("/mnt/c/Users/ricardo/Downloads/Run5320_0.h5")
+data = Nab.File("/mnt/c/Users/ricardo/Downloads/Run5730_1.h5")
 
 
 # Extract coincidence waveforms
