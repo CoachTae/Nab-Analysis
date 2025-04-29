@@ -5,10 +5,23 @@ import matplotlib.pyplot as plt
 import os
 import random
 import time
+import Paths
+
+
+User = 'Skylar'
+
+
+if User.lower() == 'skylar':
+    paths = Paths.Skylar_Paths
+
+elif User.lower() == 'arush':
+    paths = Paths.Arush_Paths
+
+
 # Path for PyNab package
-sys.path.append("C:/Users/ricardo/Downloads/pyNab-master/pyNab-master/src")
+sys.path.append(paths[0])
 # Path for deltarice (package created by David Matthew for Nab)
-sys.path.append("C:/Users/ricardo/Downloads/deltarice-master/deltarice-master/build/lib.linux-x86_64-3.10")
+sys.path.append(paths[1])
 import nabPy as Nab
 import h5py
 
@@ -19,7 +32,8 @@ the methods available in it, and how to use it overall.
 '''
 
 # Load in data
-data = Nab.File("/mnt/c/Users/ricardo/Downloads/Run5730_1.h5")
+data = Nab.File(paths[2]+"Run5730_1.h5")
+
 
 
 # Extract coincidence waveforms
