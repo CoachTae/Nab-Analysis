@@ -3,4 +3,8 @@ Skylar_Paths = ["C:/Users/ricardo/Downloads/pyNab-master/pyNab-master/src", #PyN
                 "/mnt/c/Users/ricardo/Downloads/"] #Folder where files are stored
                 
 
-Arush_Paths = []
+Arush_Paths = ["/Users/akannan/Downloads/Lab/NabWork/NabPy/src"# Path location for pyNab
+               "/Users/akannan/Downloads/Lab/NabWork/deltarice-master" # Path location for deltarice
+               ]
+
+
