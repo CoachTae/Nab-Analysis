@@ -5,10 +5,11 @@ import matplotlib.pyplot as plt
 import os
 import random
 import time
+sys.path.append("/Users/akannan/Downloads/Lab/Nab-Analysis")
 import Paths
 
 
-User = 'Skylar'
+User = 'arush'
 
 
 if User.lower() == 'skylar':
@@ -32,8 +33,7 @@ the methods available in it, and how to use it overall.
 '''
 
 # Load in data
-data = Nab.File(paths[2]+"Run5730_1.h5")
-
+data = Nab.File(paths[2]+"Run5730_0.h5")
 
 
 # Extract coincidence waveforms
@@ -41,7 +41,7 @@ coinc = data.coincWaves()
 pulsr = data.pulsrWaves()
 noise = data.noiseWaves()
 single = data.singleWaves()
-
+print("got here sofar 2")
 '''params: list with varying elements depending on the method passed
         (optional parameters shown in parenthesis)
         'trap': [risetime, flat top length, decay rate, (threshold percent, mean, shift)]
@@ -51,21 +51,21 @@ single = data.singleWaves()
 filter_settings = [1250, 50, 1250]
 
 # Coincidence waves energy timings
-Stimings = single.determineEnergyTiming(method='trap', params=filter_settings)
-print(Stimings)
+Ctimings = coinc.determineEnergyTiming(method='trap', params=filter_settings)
+print(Ctimings)
 
 # Plotting energies of coincidence waves
-fig, ax = plt.subplots(figsize(10, 5))
+fig, ax = plt.subplots(figsize=(10, 5))
 fig.patch.set_facecolor('xkcd:white')
 fig.text(0.5, -0.05, "Generated with: single.determineEnergyTiming(method='trap', params=filter_settings)", ha='center')
 ax.set_xlabel('ADC Channel')
 ax.set_ylabel('Counts')
 ax.grid(True)
-ax.set_title('Energy Histogram \n Singles Data')
-Stimings.hist('energy', bins = Nab.np.arange(0,6000))
+ax.set_title('Energy Histogram \n Coiinc Data')
+Ctimings.hist('energy', bins = Nab.np.arange(0,6000))
 plt.xlim(0,6000)
 plt.ylim(0,20)
-Stimings.data().columns
+Ctimings.data().columns
 
 
 
