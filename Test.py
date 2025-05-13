@@ -6,8 +6,9 @@ import os
 import random
 import time
 import Paths
+import Plotting
 
-
+start_time = time.time()
 User = 'Skylar'
 
 
@@ -40,9 +41,30 @@ try:
 except ImportError:
     pass # Fallback to system defaults
 
+run = Nab.DataRun(paths[2], 7616)
+parameters = run.parameterFile()
+
+
+#noise = run.noiseWaves()
+regcoinc = run.coincWaves()
+coinc = run.coincWaves().headers()
+
+print(f'Finished pulling waveforms: {time.time() - start_time} seconds')
+print(len(regcoinc.waves()))
+
+filter_settings = [1250, 50, 1250]
+regcoinc.defineCut("hit type", "=", 2)
+print(len(regcoinc.waves()))
+coinc_energies = regcoinc.determineEnergyTiming(method='trap', params=filter_settings, batchsize=10)
+
+
+print("Test completed!")
+sys.exit()
+
+#------------------------------------------------------------------------------
 
 # Load in data
-data = Nab.File(paths[2]+"Run5730_1.h5")
+data = Nab.File(paths[2]+"Run7597_0.h5")
 
 
 
@@ -58,30 +80,6 @@ single = data.singleWaves()
         'cusp': [risetime, flat top length, decay rate, (threshold percement, mean, shift)]
         'doubletrap': [risetime, flat top length, decay rate, (threshold percent, mean, shift)]'''
 
-
-
-#-------------------------------------------------------------------------------
-
-counts = {}
-for i in range(10000):
-    try:
-        data = noise.wave(i)
-        for reading in data:
-            if reading in counts.keys():
-                counts[reading] += 1
-            else:
-                counts[reading] = 1
-    except:
-        break
-
-print(f'{i} waveforms recorded.')
-
-x = list(counts.keys())
-y = list(counts.values())
-
-plt.plot(x,y, 'o')
-plt.show()
-sys.exit()
 
 
 
@@ -107,5 +105,8 @@ plt.show()
 
 
 
+
+
+#------------------------------------------------------------------------------
 # Print something to show that the code has resolved completely.
 print("Test successful!")
