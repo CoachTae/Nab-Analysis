@@ -48,37 +48,83 @@ run = Nab.DataRun(paths[2], 8118)
 parameters = run.parameterFile()
 
 
-#noise = run.noiseWaves()
+noise = run.noiseWaves()
+noise_headers = noise.headers()
 #regcoinc = run.coincWaves()
 #coinc = run.coincWaves().headers()
-singles = run.singleWaves()
-singles_headers = run.singleWaves().headers()
 
 # Filter for populated pixel (1061) indices
 singles_indices = singles_headers[singles_headers['pixel'] == 1061].index.tolist()
 
-# Cut for only waveforms from most populated pixel
-singles.defineCut('custom', singles_indices)
+print(f'Number of waveforms: {len(noise.waves())}')
 
-# Apply trap filter and determine energies
+noise_list = []
+for i in range(len(noise.waves())):
+    noise_list.append(noise.wave(i).tolist())
+
+#print(len(noise_list))
+#print(len(noise_list[204]))
+
+    
+with open("NabData.JSON", 'r') as f:
+    data_dict = json.load(f)
+
+data_dict["Background"] = noise_list
+
+with open("NabData.JSON", 'w') as f:
+    json.dump(data_dict, f)
+
+print("Test completed!")
+sys.exit()
+
+
+
+
+#------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+
+
+
+
+# Load in data
+data = Nab.File(paths[2]+"Run7597_0.h5")
+
+
+
+# Extract coincidence waveforms
+coinc = data.coincWaves()
+pulsr = data.pulsrWaves()
+noise = data.noiseWaves()
+single = data.singleWaves()
+
+'''params: list with varying elements depending on the method passed
+        (optional parameters shown in parenthesis)
+        'trap': [risetime, flat top length, decay rate, (threshold percent, mean, shift)]
+        'cusp': [risetime, flat top length, decay rate, (threshold percement, mean, shift)]
+        'doubletrap': [risetime, flat top length, decay rate, (threshold percent, mean, shift)]'''
+
+
+
+
 filter_settings = [1250, 50, 1250]
-singles_energies = singles.determineEnergyTiming('trap', params=filter_settings)
 
-# Get headers object w/ energy column
-energies_headers = singles_energies.data()
+# Coincidence waves energy timings
+Ctimings = coinc.determineEnergyTiming(method='trap', params=filter_settings)
+print(Ctimings)
 
-# Pull just the energies
-energies = energies_headers['energy']*0.3
-
-# Histogram
-bin_size = 0.2
-min_energy = energies.min()
-max_energy = energies.max()
-bins = np.arange(min_energy, max_energy + bin_size, bin_size)
-
-plt.hist(energies, bins=bins)
-plt.xlabel('Energy')
-plt.ylabel('Count')
+# Plotting energies of coincidence waves
+fig, ax = plt.subplots(figsize=(10, 5))
+fig.patch.set_facecolor('xkcd:white')
+fig.text(0.5, -0.05, "Generated with: coinc.determineEnergyTiming(method='trap', params=filter_settings)", ha='center')
+ax.set_xlabel('ADC Channel')
+ax.set_ylabel('Counts')
+ax.grid(True)
+ax.set_title('Energy Histogram \n Singles Data')
+Ctimings.hist('energy', bins = Nab.np.arange(0,6000))
+plt.xlim(0,6000)
+plt.ylim(0,20)
+Ctimings.data().columns
 plt.show()
 
 
