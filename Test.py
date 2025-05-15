@@ -7,6 +7,7 @@ import random
 import time
 import Paths
 import Plotting
+import json
 
 start_time = time.time()
 User = 'Skylar'
@@ -49,19 +50,48 @@ parameters = run.parameterFile()
 regcoinc = run.coincWaves()
 coinc = run.coincWaves().headers()
 
-print(f'Finished pulling waveforms: {time.time() - start_time} seconds')
-print(len(regcoinc.waves()))
 
+print(f'Initial # of Electrons: {len(regcoinc.waves())}')
+
+# Find median timestamp value
+# This has been edited to where it's no longer the median
+    # Instead it finds the quarter-marked timestamp.
+median_timestamp = coinc["timestamp"].quantile(0.25)
+
+# Filter out electrons
 filter_settings = [1250, 50, 1250]
 regcoinc.defineCut("hit type", "=", 2)
-print(len(regcoinc.waves()))
+
+#Cut half of the electrons out by timestamp
+regcoinc.defineCut("timestamp", "<", median_timestamp)
+
+print(f'After timestamp cut: {len(regcoinc.waves())}')
+# Run Trap filter for energies
 coinc_energies = regcoinc.determineEnergyTiming(method='trap', params=filter_settings, batchsize=10)
 
+pd_df = coinc_energies.data()
+energies = pd_df["energy"]*0.3
+energies = energies.tolist()
+print(energies)
 
+data_dict = {
+    "Electron Energy": energies
+    }
+
+with open("NabData.json", 'w') as f:
+    json.dump(data_dict, f)
 print("Test completed!")
 sys.exit()
 
+
+
+
 #------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+
+
+
 
 # Load in data
 data = Nab.File(paths[2]+"Run7597_0.h5")
