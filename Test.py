@@ -46,40 +46,30 @@ run = Nab.DataRun(paths[2], 7616)
 parameters = run.parameterFile()
 
 
-#noise = run.noiseWaves()
-regcoinc = run.coincWaves()
-coinc = run.coincWaves().headers()
+noise = run.noiseWaves()
+noise_headers = noise.headers()
+#regcoinc = run.coincWaves()
+#coinc = run.coincWaves().headers()
 
 
-print(f'Initial # of Electrons: {len(regcoinc.waves())}')
+print(f'Number of waveforms: {len(noise.waves())}')
 
-# Find median timestamp value
-# This has been edited to where it's no longer the median
-    # Instead it finds the quarter-marked timestamp.
-median_timestamp = coinc["timestamp"].quantile(0.25)
+noise_list = []
+for i in range(len(noise.waves())):
+    noise_list.append(noise.wave(i).tolist())
 
-# Filter out electrons
-filter_settings = [1250, 50, 1250]
-regcoinc.defineCut("hit type", "=", 2)
+#print(len(noise_list))
+#print(len(noise_list[204]))
 
-#Cut half of the electrons out by timestamp
-regcoinc.defineCut("timestamp", "<", median_timestamp)
+    
+with open("NabData.JSON", 'r') as f:
+    data_dict = json.load(f)
 
-print(f'After timestamp cut: {len(regcoinc.waves())}')
-# Run Trap filter for energies
-coinc_energies = regcoinc.determineEnergyTiming(method='trap', params=filter_settings, batchsize=10)
+data_dict["Background"] = noise_list
 
-pd_df = coinc_energies.data()
-energies = pd_df["energy"]*0.3
-energies = energies.tolist()
-print(energies)
-
-data_dict = {
-    "Electron Energy": energies
-    }
-
-with open("NabData.json", 'w') as f:
+with open("NabData.JSON", 'w') as f:
     json.dump(data_dict, f)
+
 print("Test completed!")
 sys.exit()
 
