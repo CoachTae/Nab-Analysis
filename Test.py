@@ -9,6 +9,9 @@ sys.path.append("/Users/akannan/Downloads/Lab/Nab-Analysis")
 import Paths
 import Plotting
 import json
+from Classes.KalmanFilterClass import KF
+
+
 
 
 start_time = time.time()
@@ -48,31 +51,52 @@ run = Nab.DataRun(paths[2], 8118)
 parameters = run.parameterFile()
 
 
-noise = run.noiseWaves()
-noise_headers = noise.headers()
-#regcoinc = run.coincWaves()
-#coinc = run.coincWaves().headers()
+#noise = run.noiseWaves()
+#noise_headers = noise.headers()
+coinc = run.coincWaves()
+#coinc_headers = coinc.headers()
+
+coinc.defineCut("hit type", "=", 0)
+
+#print(f'Number of waveforms: {len(noise.waves())}')
+#print(f'Initial # of particle counts: {len(coinc.waves())}')
+
+N = len(coinc.waves())
+i = random.randint(0, N - 1)
+
+KFilter = KF()
+KFilter.set_transition_covariance(0.001)
+
+sample = coinc.wave(i)
+smoothed = KFilter.smooth(sample)
 
 # Filter for populated pixel (1061) indices
 singles_indices = singles_headers[singles_headers['pixel'] == 1061].index.tolist()
 
-print(f'Number of waveforms: {len(noise.waves())}')
+print(f'Sample shape: {sample.shape}')
+print(f'Smoothed shape: {smoothed.shape}')
 
-noise_list = []
-for i in range(len(noise.waves())):
-    noise_list.append(noise.wave(i).tolist())
 
-#print(len(noise_list))
-#print(len(noise_list[204]))
+t = np.arange(len(sample))
 
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(12,6))
+
+axs[0].plot(t, sample, label='Raw Waveform')
+axs[0].legend()
+
+axs[1].plot(t, smoothed, label='Smoothed Waveform', color='orange')
+axs[1].legend()
+
+ymin, ymax = axs[0].get_ylim()
+
+axs[0].set_ylim(ymin, ymax)
+axs[1].set_ylim(ymin, ymax)
+
+plt.xlabel('Time (us)')
+plt.tight_layout()
+plt.show()
     
-with open("NabData.JSON", 'r') as f:
-    data_dict = json.load(f)
 
-data_dict["Background"] = noise_list
-
-with open("NabData.JSON", 'w') as f:
-    json.dump(data_dict, f)
 
 print("Test completed!")
 sys.exit()
