@@ -1,14 +1,19 @@
 import os
 import sys
-import copy
 import time
-import random
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import Paths
-import Plotting
 import json
+
+# Get the parent directory so we can import KalmanFilterClass
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Add it to sys.path
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+    
 from Classes.KalmanFilterClass import KF
 
 
