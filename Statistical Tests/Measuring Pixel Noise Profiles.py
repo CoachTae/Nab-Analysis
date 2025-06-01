@@ -16,14 +16,11 @@ run_num = 8053
 
 
 start_time = time.time()
-User = 'Skylar2'
+User = 'Skylar'
 
 
 if User.lower() == 'skylar':
     paths = Paths.Skylar_Paths
-
-elif User.lower() == "skylar2":
-    paths = Paths.Skylar_Home
 
 elif User.lower() == 'arush':
     paths = Paths.Arush_Paths
@@ -36,6 +33,11 @@ sys.path.append(paths[1])
 import nabPy as Nab
 import h5py
 
+'''
+Currently just trying to replicate the Basic.ipynb file to make sure
+everything works on this computer. Also to help learn the PyNab package,
+the methods available in it, and how to use it overall.
+'''
 
 
 # This "try" statement is for users using WSL which has no graphical display
@@ -56,7 +58,7 @@ noise_headers = noise.headers().sort_values(by='pixel')
 
 # i is our pixel number
 with open("Pixel Noise Profiles.txt", 'w') as f:
-    f.write(f"File {run_num}\n")
+    f.write(f"Run {run_num}\n")
     f.write("Pixel\t# Waveforms\tMean\tSD\n")
     for i in range(128):
         noise_vals = None
