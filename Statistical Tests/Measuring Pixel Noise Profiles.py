@@ -58,7 +58,7 @@ noise_headers = noise.headers().sort_values(by='pixel')
 
 # i is our pixel number
 with open("Pixel Noise Profiles.txt", 'w') as f:
-    f.write(f"File {run_num}\n")
+    f.write(f"Run {run_num}\n")
     f.write("Pixel\t# Waveforms\tMean\tSD\n")
     for i in range(128):
         noise_vals = None

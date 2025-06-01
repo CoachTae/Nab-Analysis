@@ -28,6 +28,7 @@ This script does the following:
 '''
 
 
+run_num = 7616
 particle_type = 0 # 0 for protons, 2 for electrons
 
 
@@ -59,7 +60,61 @@ try:
 except ImportError:
     pass # Fallback to system defaults
 
-run = Nab.DataRun(paths[2], 7616)
+
+
+
+
+def mean_filter(waveform, kernel_size=10):
+    # Make sure kernel size is even number
+    if kernel_size % 2 != 0:
+        print("Please enter an even number for kernel_size!")
+        sys.exit()
+    
+    # Find the midway point of our kernel
+    mid_value = kernel_size // 2
+
+    filtered_WF = []
+    for i, reading in enumerate(waveform):
+        if i - mid_value < 0:
+            mean = np.mean(waveform[:i + mid_value+1])
+        elif i + mid_value > len(waveform):
+            mean = np.mean(waveform[i - mid_value:])
+        else:
+            mean = np.mean(waveform[i - mid_value:i + mid_value+1])
+    
+        filtered_WF.append(mean)
+    filtered_WF = np.array(filtered_WF)
+
+    return filtered_WF
+
+
+
+def median_filter(waveform, kernel_size=10):
+    # Make sure kernel size is even number
+    if kernel_size % 2 != 0:
+        print("Please enter an even number for kernel_size!")
+        sys.exit()
+    
+    # Find the midway point of our kernel
+    mid_value = kernel_size // 2
+
+    filtered_WF = []
+    for i, reading in enumerate(waveform):
+        if i - mid_value < 0:
+            median = np.median(waveform[:i + mid_value+1])
+        elif i + mid_value > len(waveform):
+            median = np.median(waveform[i - mid_value:])
+        else:
+            median = np.median(waveform[i - mid_value:i + mid_value+1])
+    
+        filtered_WF.append(median)
+    filtered_WF = np.array(filtered_WF)
+
+    return filtered_WF
+
+
+
+run = Nab.DataRun(paths[2], run_num)
 parameters = run.parameterFile()
 
 
@@ -77,12 +132,11 @@ N = len(coinc.waves())
 
 KFilter = KF()
 KFilter.set_transition_covariance(0.001)
-KFilter.set_observation_covariance(5)
+KFilter.set_observation_covariance(30)
 
 while True:
 
     i = random.randint(0, N - 1)
-
 
 
     sample = coinc.wave(i)
@@ -108,7 +162,7 @@ while True:
     axs[0].set_ylim(ymin, ymax)
     axs[1].set_ylim(ymin, ymax)
 
-    plt.xlabel('Time (us)')
+    plt.xlabel('Time')
     plt.tight_layout()
     plt.show()
     

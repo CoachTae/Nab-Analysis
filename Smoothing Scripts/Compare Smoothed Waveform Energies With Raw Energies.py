@@ -18,7 +18,7 @@ from Classes.KalmanFilterClass import KF
 
 
 num_particles = 10
-particle_type = 2 # 0 for protons, 2 for electrons
+particle_type = 0 # 0 for protons, 2 for electrons
 
 
 start_time = time.time()
