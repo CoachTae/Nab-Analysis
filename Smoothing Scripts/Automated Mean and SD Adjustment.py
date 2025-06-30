@@ -16,14 +16,11 @@ run_num = 7616
 particle_type = 0 # 0 for protons, 2 for electrons
 
 start_time = time.time()
-User = 'Skylar2'
+User = 'Skylar'
 
 
 if User.lower() == 'skylar':
     paths = Paths.Skylar_Paths
-
-elif User.lower() == "skylar2":
-    paths = Paths.Skylar_Home
 
 elif User.lower() == 'arush':
     paths = Paths.Arush_Paths
