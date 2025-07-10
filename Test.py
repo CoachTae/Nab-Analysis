@@ -12,9 +12,6 @@ import json
 from Classes.KalmanFilterClass import KF
 
 
-run_num = 7616
-particle_type = 0 # 0 for protons, 2 for electrons
-
 start_time = time.time()
 User = 'Skylar2'
 
@@ -37,6 +34,7 @@ import nabPy as Nab
 import h5py
 
 
+
 # This "try" statement is for users using WSL which has no graphical display
 # On normal systems or with systems without tkinter, it will just pass instead.
 try:
@@ -47,139 +45,48 @@ except ImportError:
 
 
 
-def plot_comparison(sample, smoothed):
-    t = np.arange(len(sample))
-
-    fig, axs = plt.subplots(2, 1, sharex=True, figsize=(12,6))
-
-    axs[0].plot(t, sample, label='Raw Waveform')
-    axs[0].legend()
-
-    axs[1].plot(t, smoothed, label='Smoothed Waveform', color='orange')
-    axs[1].legend()
-
-    ymin, ymax = axs[0].get_ylim()
-
-    axs[0].set_ylim(ymin, ymax)
-    axs[1].set_ylim(ymin, ymax)
-
-    plt.xlabel('Time (us)')
-    plt.tight_layout()
-    plt.show()
+run = Nab.DataRun(paths[2], 8118)
+parameters = run.parameterFile()
 
 
+#noise = run.noiseWaves()
+#regcoinc = run.coincWaves()
+#coinc = run.coincWaves().headers()
+singles = run.singleWaves()
+singles_headers = run.singleWaves().headers()
 
+# Filter for populated pixel (1061) indices
+singles_indices = singles_headers[singles_headers['pixel'] == 1061].index.tolist()
 
-# Load Data
-run = Nab.DataRun(paths[2], run_num)
-print(f'File loaded: {time.time() - start_time} seconds')
+# Cut for only waveforms from most populated pixel
+singles.defineCut('custom', singles_indices)
 
-
-# Load waveforms
-coinc = run.coincWaves()
-coinc_header = coinc.headers()
-noise = run.noiseWaves()
-noise_header = noise.headers()
-print(f'Waveforms extracted.')
-
-
-# Map waveform indices to pixel number
-wf_to_pixel = {} # Dictionary. Keys = waveform id/#, Values = pixel number
-pixels = []
-for i, pixel in enumerate(coinc_header['pixel']):
-    if coinc_header.iloc[i]['hit type'] == particle_type:
-        wf_to_pixel[i] = pixel
-        if pixel not in pixels:
-            pixels.append(pixel)
-
-pixels.sort()
-
-means = []
-sds = []
-# Get noise information for each pixel
-for i in pixels:
-    noise_vals = None
-    
-    WFids = noise_header[noise_header['pixel'] == i].index.tolist()
-
-    for WFid in WFids:
-        try:
-            noise_vals += noise.wave(WFid)
-        except:
-            noise_vals = noise.wave(WFid)
-
-
-    try:
-        means.append(np.mean(noise_vals))
-        sds.append(np.std(noise_vals))
-    except:
-        means.append(None)
-        sds.append(None)
-
-
-avg_mean = np.mean(means)
-avg_sd = np.mean(sds)
-for i in range(len(means)):
-    if means[i] is None:
-        means[i] = avg_mean
-    else:
-        pass
-
-    if sds[i] is None:
-        sds[i] = avg_sd
-    else:
-        pass
-    
-pixel_to_noise = {pixel: (mean, sd) for pixel, mean, sd in zip(pixels, means, sds)}
-
-# Select 10 random waveforms
-random_WFs = []
-for i in range(10):
-    choice = random.choice(list(wf_to_pixel.keys()))
-    while True:
-        if choice in random_WFs:
-            choice = random.choice(list(wf_to_pixel.keys()))
-        else:
-            break
-    random_WFs.append(choice)
-
-
-# Apply cuts so we don't calculate every energy
-coinc.defineCut('custom', random_WFs)
-
-# Determine raw energy
-raw_energy_timing = coinc.determineEnergyTiming(method='trap', params=[1250, 50, 1250], useGPU=True, batchsize=100)
-raw_energies = raw_energy_timing.data()['energy']
-print(raw_energies)
-
-# Create filter
+# Initialize filter
 KFilter = KF()
 
+for index in singles_indices:
+    coinc._waveformFile__waves[index] = Kfilter.smooth(coinc._waveformFile__waves[index])
 
-# Open up waveforms for modification
-for index in random_WFs:
-    WF = coinc._waveformFile__waves[index]
-    pixel = wf_to_pixel[index]
-    mean, sd = pixel_to_noise[pixel]
+# Apply trap filter and determine energies
+filter_settings = [1250, 50, 1250]
+singles_energies = singles.determineEnergyTiming('trap', params=filter_settings)
 
-    WF -= mean
-    KFilter.set_observation_covariance(sd)
+# Get headers object w/ energy column
+energies_headers = singles_energies.data()
 
-    smoothed_WF = KFilter.smooth(WF)
+# Pull just the energies
+energies = energies_headers['energy']*0.3
 
-    coinc._waveformFile__waves[index] = smoothed_WF
+# Histogram
+bin_size = 0.2
+min_energy = energies.min()
+max_energy = energies.max()
+bins = np.arange(min_energy, max_energy + bin_size, bin_size)
 
-    # Uncomment this line if you want to plot each before-and-after waveform
-    #plot_comparison(WF, smoothed_WF)
-
-filtered_energy_timing = coinc.determineEnergyTiming(method='trap', params=[1250, 50, 1250], useGPU=True, batchsize=100)
-filtered_energies = filtered_energy_timing.data()['energy']
-
-
-print(filtered_energies)
-
-    
+plt.hist(energies, bins=bins)
+plt.xlabel('Energy')
+plt.ylabel('Count')
+plt.show()
 
 
-print("Test completed!")
-sys.exit()
+print("TEST COMPLETED!")
