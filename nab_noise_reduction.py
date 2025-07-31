@@ -28,7 +28,9 @@ class NabFalseProtons:
         self.parameterNames = ['amp1', 'mean1', 'sigma1', 'offset1', 'amp2', 'mean2', 'sigma2', 'offset2']
         self.Etimestamp = {}
         self.Ptimestamp = {}
-        self.not_in_range = {}
+        self.Pnot_in_range = {}
+        self.Enot_in_range = {}
+        self.pnes = {}
         self._sorted_electron_ts = None
     '''
     -----------------------------------------------------------------------------
@@ -144,15 +146,181 @@ class NabFalseProtons:
         
             # If not in range, remove proton
             if not in_range:
-                self.not_in_range[Pidx] = Pts
+                self.Pnot_in_range[Pidx] = Pts
                 del self.Ptimestamp[Pidx]
 
         # Return the counts of protons before and after filtering
         return {
             "initial": len(sorted_Ets),  # Initial number of electrons
             "filtered": len(self.Ptimestamp),  # Remaining protons after filtering
-            "removed": len(self.not_in_range)  # Protons removed based on the filter
+            "removed": len(self.Pnot_in_range)  # Protons removed based on the filter
         }
+  
+    def filter_electrons_by_time_range(self, window=10000, lower_bound=0):
+        '''
+        Any electron must be within a specified timestamp window or physically 40 us 
+        of any proton. This function removes all electrons that do not fall within 
+        the time range of any proton, from the Etimetamps dictionary.
+        
+        Parameters
+        ----------
+        window: int, defaults to 10000
+            The timestamp window of 10,000 timestamps or physically 40 us. 
+            Can be adjusted to any potential time range.
+        
+        lower_bound: int, defaults to 0
+            The lower bound for the time range. Any electron's timestamp must 
+            be greater than or equal to this value to be considered for filtering.
+        
+        Returns
+        -------
+        sizes: dict
+            Returns the number of electrons:
+            - 'initial': The number of protons in the system.
+            - 'filtered': The number of electrons that pass the filtering criteria.
+            - 'removed': The number of electrons that were removed based on the filtering.
+        '''
+    
+        # Sort the proton timestamps
+        sorted_Pts = sorted(self.Ptimestamp.items(), key=lambda x: x[1])
+        sorted_ts = [ts for _, ts in sorted_Pts]
+        
+        # Iterate through electrons
+        for Eidx, Ets in list(self.Etimestamp.items()):
+            # Apply the lower bound check
+            if Ets < lower_bound:
+                self.not_in_range[Eidx] = Ets
+                del self.Etimestamp[Eidx]
+                continue
+        
+            # Bisect to find the closest protons' timestamps within the window
+            pos = bisect.bisect_left(sorted_ts, Ets - window)
+            in_range = False
+            
+            # Check if the electron is within the upper and lower bound time range
+            while pos < len(sorted_ts) and sorted_ts[pos] <= Ets + window:
+                if abs(sorted_ts[pos] - Ets) <= window:
+                    in_range = True
+                    break
+                pos += 1
+            
+            # If not in range, remove electron
+            if not in_range:
+                self.Enot_in_range[Eidx] = Ets
+                del self.Etimestamp[Eidx]
+
+        # Return the counts of electrons before and after filtering
+        return {
+            "initial": len(sorted_Pts),  # Initial number of protons
+            "filtered": len(self.Etimestamp),  # Remaining electrons after filtering
+            "removed": len(self.Enot_in_range)  # Electrons removed based on the filter
+            }
+    
+    
+    def associate_protons_with_electrons(self, window=10000, lower_bound=0):
+        '''
+        Associates each proton with a list of electron indices whose timestamps fall 
+        within ±window of the proton's timestamp and are >= lower_bound.
+        Assumes electron timestamps are already filtered.
+    
+        Parameters
+        ----------
+        window: int
+            Timestamp window (±window) around each proton, default 10000.
+        
+        lower_bound: int
+            Minimum allowed timestamp for electrons.
+        
+        Returns
+        -------
+        dict
+            self.pnes mapping: {proton_idx: [electron_idx, ...], ...}
+        '''
+        self.pnes.clear()
+    
+        for Pidx, Pts in self.Ptimestamp.items():
+            associated = [
+                Eidx for Eidx, Ets in self.Etimestamp.items()
+                if Ets >= lower_bound and (Pts - window <= Ets <= Pts + window)
+            ]
+            if associated:
+                self.pnes[Pidx] = associated
+            
+        return self.pnes
+
+
+    def TEMPfilter_electrons_by_time_range(self, window=10000, lower_bound=0):
+        '''
+        Any electron must be within a specified timestamp window or physically 40 us 
+        of any proton. This function removes all electrons that do not fall within 
+        the time range of any proton, from the Etimetamps dictionary.
+        
+        Parameters
+        ----------
+        window: int, defaults to 10000
+            The timestamp window of 10,000 timestamps or physically 40 us. 
+            Can be adjusted to any potential time range.
+            
+        lower_bound: int, defaults to 0
+            The lower bound for the time range. Any electron's timestamp must 
+            be greater than or equal to this value to be considered for filtering.
+            
+        Returns
+        -------
+        sizes: dict
+            Returns the number of electrons:
+                - 'initial': The number of protons in the system.
+                - 'filtered': The number of electrons that pass the filtering criteria.
+                - 'removed': The number of electrons that were removed based on the filtering.
+        '''
+        
+        # Sort the proton timestamps
+        sorted_Pts = sorted(self.Ptimestamp.items(), key=lambda x: x[1])
+        sorted_ts = [ts for _, ts in sorted_Pts]
+        
+        # Iterate through protons
+        for Pidx, Pts in sorted_Pts:
+            # Initialize an empty list to store the electrons for this proton
+            self.pnes[Pidx] = []
+        
+            # Iterate through electrons
+            for Eidx, Ets in list(self.Etimestamp.items()):
+                # Apply the lower bound check
+                if Ets < lower_bound:
+                    self.not_in_range[Eidx] = Ets
+                    del self.Etimestamp[Eidx]
+                    continue
+                
+                pos = bisect.bisect_left(sorted_ts, Ets - window)
+                in_range = False
+                
+                while pos < len(sorted_ts) and sorted_ts[pos] <= Ets + window:
+                    if abs(sorted_ts[pos] - Ets) <= window:
+                        in_range = True
+                        break
+                    pos += 1
+                if not in_range:
+                    self.Enot_in_range[Eidx] = Ets
+                    del self.Etimestamp[Eidx]
+            for Pidx, Pts in sorted_Pts:
+                aEs = []
+                for Eidx, Ets in list(self.Etimestamp.items()):
+                    if Pts - window <= Ets <= Pts + window:
+                        aEs.append(Eidx)
+                    if aEs:
+                        self.pnes[Pidx] = aEs
+                        
+        
+
+    
+        # Return the counts of electrons before and after filtering
+        return {
+            "initial": len(sorted_Pts),  # Initial number of protons
+            "filtered": len(self.Etimestamp),  # Remaining electrons after filtering
+            "removed": len(self.Enot_in_range),  # Electrons removed based on the filter
+            "pnes": self.pnes  # Proton-electron associations
+        }
+    
     
     def real_and_false_protons(self):
         '''
@@ -170,7 +338,7 @@ class NabFalseProtons:
 
         '''
         self.coinc.resetCuts()
-        self.coinc.defineCut("custom", list(self.not_in_range.keys()))
+        self.coinc.defineCut("custom", list(self.Pnot_in_range.keys()))
         false_protons = self.coinc.determineEnergyTiming(method='trap', params=self.filter_settings)
 
         self.coinc.resetCuts()
@@ -178,6 +346,31 @@ class NabFalseProtons:
         real_protons = self.coinc.determineEnergyTiming(method='trap', params=self.filter_settings)
 
         return false_protons, real_protons
+
+    def real_and_false_electrons(self):
+        '''
+        This function essentially organizes all the protons calssified by the DAQ 
+        (with physical energies) into those in and out of the time range. In order to 
+        function as intended, this must be called after extract_electron_timestamps(),
+        extract_proton_timestamps() and filter_protons_by_time_range().
+
+        Returns
+        -------
+        false_protons : Returns a resultFileClass object of the proton hits by 
+            index from the not_in_range dictionary.(protons not in the time range)
+        real_protons : Returns a resultFileClass object of the proton hits by 
+            index from the Ptimestamp dictionary.(protons not in the time range)
+
+        '''
+        self.coinc.resetCuts()
+        self.coinc.defineCut("custom", list(self.Enot_in_range.keys()))
+        false_electrons = self.coinc.determineEnergyTiming(method='trap', params=self.filter_settings)
+
+        self.coinc.resetCuts()
+        self.coinc.defineCut("custom", list(self.Etimestamp.keys()))
+        real_electrons = self.coinc.determineEnergyTiming(method='trap', params=self.filter_settings)
+
+        return false_electrons, real_electrons
 
     '''
     -----------------------------------------------------------------------------
@@ -296,7 +489,7 @@ class NabFalseProtons:
         '''
         This function returns the right hand value of the noise gaussian (in double gaussian fit)
         n standard deviations away from the peak. 
-        Since gaussian, 1 std dev away from the peak (in both directions) will encompass 68% of the noise,
+        Gaussian: 1 std dev away from the peak (in both directions) will encompass 68% of the noise,
         n=2 ==> 95%, n=3 ==> 99.7% of the noise measured.
         Parameters
         ----------
