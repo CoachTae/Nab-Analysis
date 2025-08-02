@@ -39,10 +39,10 @@ noise.resetCuts()
 noise.defineCut("pixel", "=",  12)
 
 
-sample = noise.wave(0)
-t1 = np.arange(len(sample))
+w1=  noise.wave(0)
+t1 = np.arange(len(w1))
 plt.figure(figsize=(12, 6))
-plt.plot(t1, sample, label="Raw Waveform")
+plt.plot(t1, w1, label="Raw Waveform")
 plt.title(f"Noise {1}")
 plt.xlabel("Time")
 plt.legend()
@@ -51,42 +51,60 @@ plt.show()
 
 
 #%%
-def sim_wf(t0, amplitude, rise_time, decay_tau, dt=0.01, duration=None):
+def sim_wf(t0, amplitude, rise_time, decay_tau):
     """
-    Simulate a waveform with linear rise and exponential decay.
+    Simulate a waveform with fixed time base from 0 to 14000 with dt=1.
+    The waveform rises linearly to `amplitude` then decays exponentially.
 
     Parameters:
-        t0 (float): Start time of the waveform
-        amplitude (float): Peak amplitude of the waveform
-        rise_time (float): Time it takes to rise to the peak
-        decay_tau (float): Exponential decay time constant
-        dt (float): Time step (sampling interval)
-        duration (float): Total simulation duration; if None, auto-estimated
+        t0 (float): Time of start of waveform (in samples)
+        amplitude (float): Peak height
+        rise_time (float): Time to reach the peak (in samples)
+        decay_tau (float): Decay time constant (in samples)
 
     Returns:
-        t (np.ndarray): Time array
-        wf (np.ndarray): Waveform values
-        energy (float): Integral (area under the curve)
+        t (np.ndarray): Time array from 0 to 14000
+        wf (np.ndarray): Waveform values, length 14001
+        energy (float): Integral (sum) of waveform
     """
-    if duration is None:
-        duration = rise_time + 10 * decay_tau  # auto-extend if not set
+    t = np.arange(0, 14000)  # fixed time base
+    wf = np.zeros_like(t, dtype=np.float64)
 
-    t = np.arange(t0, t0 + duration, dt)
-    wf = np.zeros_like(t)
+    t0 = int(t0)
+    rise_end = t0 + int(rise_time)
 
     # Linear rise
-    rise_mask = (t >= t0) & (t < t0 + rise_time)
-    wf[rise_mask] = amplitude * (t[rise_mask] - t0) / rise_time
+    for i in range(t0, min(rise_end, len(wf))):
+        wf[i] = amplitude * (i - t0) / rise_time
 
     # Exponential decay
-    decay_mask = t >= (t0 + rise_time)
-    wf[decay_mask] = amplitude * np.exp(-(t[decay_mask] - (t0 + rise_time)) / decay_tau)
+    for i in range(rise_end, len(wf)):
+        wf[i] = amplitude * np.exp(-(i - rise_end) / decay_tau)
 
-    # Energy = area under the waveform
-    energy = np.trapz(wf, t)
+    # Energy = sum since dt = 1
+    energy = np.sum(wf)
 
     return t, wf, energy
+
+def generate_gaussian_noise(mean=0.0, std=1.0, seed=None):
+    """
+    Generate Gaussian (normal) noise.
+
+    Parameters:
+        length (int): Number of samples (typically 14001 for your waveform)
+        mean (float): Mean of the noise
+        std (float): Standard deviation of the noise
+        seed (int or None): Optional random seed for reproducibility
+
+    Returns:
+        noise (np.ndarray): Noise array of length `length`
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    return np.random.normal(loc=mean, scale=std, size=14000)
 #%%
+
+noise = generate_gaussian_noise(mean=8.759, std=3.1439)
 
 t0=6000
 amp = 110
@@ -94,37 +112,18 @@ risetime = 10
 exp_decay_param = 350 
 
 t, wf, energy = sim_wf(t0=t0, amplitude=amp, rise_time=risetime, decay_tau=exp_decay_param)
-print(f"Energy: {energy:.4f}")
-sample_resampled = np.interp(t, np.linspace(t1[0], t1[-1], len(t1)), sample)
 
-wf = wf + sample_resampled
+waveform = wf + noise
 
-t_before = np.linspace(t1[0], t0, len(t1[:np.argmax(t1 >= t0)])) 
-sample_before = sample[:np.argmax(t1 >= t0)]
 
-t_overlap = t
-
-sample_overlap = sample_resampled
-
-t_after = np.linspace(t[-1], t1[-1], len(t1[t1 >= t[-1]]))
-sample_after = sample[t1 >= t[-1]]
-
-time_combined = np.concatenate([t_before, t_overlap, t_after])
-waveform_combined = np.concatenate([sample_before, wf, sample_after])
 
 plt.figure(figsize=(12, 6))
-
-plt.plot(time_combined, waveform_combined)
-
-plt.xlim(t1[0], t1[-1])
+plt.plot(t, waveform)
+plt.xlim(t[0], t[-1])
 plt.xlabel("Time")
 plt.ylabel("Amplitude")
 plt.title("Waveform and Sample")
 plt.grid(True)
 plt.legend()
 plt.tight_layout()
-
-
-plt.show()
-    
-    
+   
