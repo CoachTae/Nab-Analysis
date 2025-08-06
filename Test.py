@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import random
 import time
+sys.path.append("/Users/akannan/Downloads/Lab/Nab-Analysis")
 import Paths
 import Plotting
 import json
