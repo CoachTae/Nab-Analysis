@@ -2,6 +2,14 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 
+'''
+This project is currently shelved.
+
+Its original intent was to quantitatively show just "how Gaussian" our noise was.
+
+Currently we're happy just observing that noise was Gaussian for each pixel.
+'''
+
 def test_gaussian_fit_from_histogram(hist_dict, plot=True):
     """
     Tests whether histogram data resembles a Gaussian using multiple statistical tests.
