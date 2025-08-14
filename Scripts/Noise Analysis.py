@@ -10,6 +10,7 @@ sys.path.append("/mnt/s/Python/Projects/Nab-Analysis")
 import Paths
 import Plotting
 import json
+import simulate_waveforms as SimWF
 
 start_time = time.time()
 User = 'Skylar2'
@@ -30,6 +31,7 @@ sys.path.append(paths[0])
 sys.path.append(paths[1])
 import nabPy as Nab
 import h5py
+import basicFunctions as bf
 
 
 
@@ -43,27 +45,26 @@ except ImportError:
 
 
 
-run = Nab.DataRun(paths[2], 7900)
-parameters = run.parameterFile()
+#run = Nab.DataRun(paths[2], 7900)
+#parameters = run.parameterFile()
 
-coinc = run.coincWaves()
-coinc_headers = run.coincWaves().headers()
-noise = run.noiseWaves()
-noise_headers = run.noiseWaves().headers()
-
-# Filter for electrons
-coinc_indices = coinc_headers[coinc_headers['hit type'] == 2].index.tolist()
-
-# Find pixel with highest electron count
-#pixel_counts = coinc_headers['pixel'][coinc_indices].value_counts()
+#coinc = run.coincWaves()
+#coinc_headers = run.coincWaves().headers()
+#noise = run.noiseWaves()
+#noise_headers = run.noiseWaves().headers()
 
 
-# Filter for electrons of the most populated pixel
-coinc.defineCut("pixel", "=", 1097)
-coinc.defineCut("hit type", "=", 2)
-
-waves = []
-for wave in coinc.waves():
-    waves.append(wave)
-
-print(len(waves))
+wf = SimWF.sim_wf(3500, 3500, 12, 1250)[1]
+wf = np.array([wf])
+energies = []
+for rise_time in range(50, 1550, 50):
+    for top in range(10, 110, 10):
+        energy, _ = bf.applyDoubleTrapFilter(wf, rise_time, top, 1250)
+        #if energy < 75 or energy > 85:
+            #print(f'rise_time: {rise_time}')
+            #print(f'top: {top}')
+        energies.append(float(energy))
+print(f'Minimum: {np.min(energies)}')
+print(f'Maximum: {np.max(energies)}')
+print(f'Mean: {np.mean(energies)}')
+print(f'SD: {np.std(energies)}')
