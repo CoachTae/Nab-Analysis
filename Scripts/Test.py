@@ -44,27 +44,29 @@ except ImportError:
     pass # Fallback to system defaults
 
 
+# 7637 = background run
+# 7900 = beam data
+# 7932 = background data (but shows 2x coincidences compared to noise?)
+# 7933 = beam data
+# 8118 = source data
 
-#run = Nab.DataRun(paths[2], 7900)
+
+run = Nab.DataRun(paths[2], 7637)
 #parameters = run.parameterFile()
 
-#coinc = run.coincWaves()
+singles = run.singleWaves()
+coinc = run.coincWaves()
 #coinc_headers = run.coincWaves().headers()
-#noise = run.noiseWaves()
+noise = run.noiseWaves()
 #noise_headers = run.noiseWaves().headers()
 
+#coinc.defineCut('hit type', '=', 2)
+#noise.defineCut('pixel', '=', 1097)
+#coinc.defineCut('pixel', '=', 1097)
 
-wf = SimWF.sim_wf(3500, 3500, 12, 1250)[1]
-wf = np.array([wf])
-energies = []
-for rise_time in range(50, 1550, 50):
-    for top in range(10, 110, 10):
-        energy, _ = bf.applyDoubleTrapFilter(wf, rise_time, top, 1250)
-        #if energy < 75 or energy > 85:
-            #print(f'rise_time: {rise_time}')
-            #print(f'top: {top}')
-        energies.append(float(energy))
-print(f'Minimum: {np.min(energies)}')
-print(f'Maximum: {np.max(energies)}')
-print(f'Mean: {np.mean(energies)}')
-print(f'SD: {np.std(energies)}')
+print(len(singles.waves()))
+print(len(coinc.waves()))
+print(len(noise.waves()))
+sys.exit()
+for wave in coinc.waves():
+    Plotting.plot_wf(wave)

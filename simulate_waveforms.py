@@ -91,6 +91,7 @@ def batch_wfs(t0, amplitude, rise_time, decay,
                 trials += 1
                 if xmin <= sample <= xmax:
                     xvals.append(sample)
+            xvals = np.array(xvals)
 
             if len(xvals) < N:
                 raise RuntimeError(f'Could not generate {N} valid samples after {trials} trials.')
