@@ -172,83 +172,134 @@ if __name__ == '__main__':
     dataFile = Nab.File(f'{dataLoc}Run{num}_1.h5')
     run = Nab.DataRun(paths[2], 7616)
     parameters = run.parameterFile()
+    nr = Nab.DataRun(paths[2], 8000)
 
+    n1 = run.noiseWaves()
+    noise = nr.noiseWaves()
+    
+#%% 4
+    simwfs = batch_wfs(t0="random", amplitude="gaussian", rise_time="random", decay="gaussian",
+                  t0min=3420, t0max=3500,
+                  ampmin = 0, ampmax = 80, ampmean=35, ampvar=225,
+                  rise_timemin=8, rise_timemax=22,
+                  decaymin = 1200, decaymax = 1300, decaymean=1259.2, decayvar=2421.9,
+                  N=200)
+    
+    t = np.arange(0, 7000)
 
-    coinc = run.coincWaves()
-    noise = run.noiseWaves()
+    noise_num = noise.headers().shape[0]
 
+#%% 5
+# Populating TRAINING data
+    protonwfs = []
+    enoisewfs = []
+    j  = 0
+    for i in range(len(simwfs)):
+        
+        
+        wf = simwfs[i] + noise.wave(j)[:7000]
+        protonwfs.append(wf)
+        j+=1
+        
+        plt.figure(figsize=(12, 6))
+        plt.plot(t, wf)
+        plt.xlim(t[0], t[-1])
+        plt.xlabel("Time")
+        plt.ylabel("Energy")
+        plt.title(f"Simulated Waveform {i}")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+    
 
+#%% 6
+    '''
+    simwfs = batch_wfs(t0="random", amplitude="gaussian", rise_time="random", decay="gaussian",
+                  t0min=3420, t0max=3500,
+                  ampmin = 0, ampmax = 80, ampmean=35, ampvar=225,
+                  rise_timemin=8, rise_timemax=22,
+                  decaymin = 1200, decaymax = 1300, decaymean=1259.2, decayvar=2421.9,
+                  N=100)
+    
+    for i in range(len(simwfs)):
+        
+        
+        wf = simwfs[i] 
+        enoisewfs.append(noise.wave(j)[:7000])
+        protonwfs.append(wf)
+        
+        j+=1
+    '''      
+    for _ in range(len(simwfs)):
+        enoisewfs.append(noise.wave(j)[:7000])
+        j+=1
+        
+        
+    enoisewfs = np.array(enoisewfs)
+    protonwfs = np.array(protonwfs)
+#%% 7
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import train_test_split
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import classification_report, confusion_matrix
+#%% 8
 
-    kwargs = {'alpha': 0.75,'cmap': 'plasma','logNorm': True}
-    kwargsPlot = {'labels':np.asarray(np.arange(1,128),dtype=str), 'labelValues': True}
-    fig = dataFile.plotHitLocations(plot = True, sourceFile='noise', kwargsFig = kwargs, kwargsPlot=kwargsPlot)
+#Labeling and setting up training data
+   
+    X = np.vstack((protonwfs, enoisewfs))
+    Y = np.hstack((np.ones(len(protonwfs)),   # Label 1 for protons
+                   np.zeros(len(enoisewfs))    # Label 0 for noise
+                   ))
+    
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+    #%% 9
+    
+# TRAINING model
 
-    fig
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X, Y)
+    #%% 10
+    
+# Populating TESTING data
+    
+    simwfs2 = batch_wfs(t0="random", amplitude="gaussian", rise_time="random", decay="gaussian",
+                  t0min=3420, t0max=3500,
+                  ampmin = 0, ampmax = 80, ampmean=35, ampvar=225,
+                  rise_timemin=8, rise_timemax=22,
+                  decaymin = 1200, decaymax = 1300, decaymean=1259.2, decayvar=2421.9,
+                  N=300)
+    protonwfs = []
+    for i in range(len(simwfs2)):      
+        wf = simwfs2[i] + noise.wave(j)[:7000]
+        protonwfs.append(wf)
+        j+=1
+    TEST_protons = np.array(protonwfs)
+        
+    enoisewfs = []
+    for _ in range(len(simwfs)):
+        enoisewfs.append(noise.wave(j)[:7000])
+        j+=1
+    TEST_noise = np.array(enoisewfs)
+    
+#%% 11
 
+# TESTING model
+    
+    
+    TEST_X = np.vstack((TEST_protons, TEST_noise))
+    TEST_Y = np.hstack((np.ones(len(TEST_protons)),   
+                   np.zeros(len(TEST_noise))   
+                   ))
+    TEST_X = scaler.transform(TEST_X)
+       
+    PRED_Y = model.predict(TEST_X)
 
+    print("Confusion Matrix:")
+    print(confusion_matrix(TEST_Y, PRED_Y))
 
-    #%%
-    headers = noise.headers()
-    indices = headers.index.tolist()
-
-    noise.resetCuts()
-    i = random.choice(indices)
-    s1 =  noise.wave(i)
-    i = random.choice(indices)
-    s2 = noise.wave(i)
-    i = random.choice(indices)
-    s3 = noise.wave(i)
-
-    st = np.append(s1, s2)
-    stt = np.append(st, s3)
-
-
-    avg = np.mean(stt)
-    std = np.std(stt)
-
-    print(std)
-
-
-    #%%
-    i=random.randint(0, 200)
-    w1=  coinc.wave(i)
-    t1 = np.arange(len(w1))
-    plt.figure(figsize=(12, 6))
-    plt.plot(t1, w1, label="Raw Waveform")
-    plt.title(f"Coinc {i}")
-    plt.xlabel("Time")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-    noise = gaussian_noise(mean=avg, std=std)
-
-    t0=6000
-    amp = 40
-    risetime = 10
-    exp_decay_param = 2000
-
-    t, wf, energy = sim_wf(t0=t0, amplitude=amp, rise_time=risetime, decay=exp_decay_param)
-
-    waveform = wf + noise
-
-
-
-    plt.figure(figsize=(12, 6))
-    plt.plot(t, waveform)
-    plt.xlim(t[0], t[-1])
-    plt.xlabel("Time")
-    plt.ylabel("Energy")
-    plt.title("Simulated Waveform")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-
-
-
-
-
+    print("\nClassification Report:")
+    print(classification_report(TEST_Y, PRED_Y))
 
 
 
