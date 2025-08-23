@@ -61,11 +61,9 @@ noise = run.noiseWaves()
 #noise_headers = run.noiseWaves().headers()
 
 #coinc.defineCut('hit type', '=', 2)
-#noise.defineCut('pixel', '=', 1097)
+noise.defineCut('pixel', '=', 1097)
 #coinc.defineCut('pixel', '=', 1097)
 
-print(len(singles.waves()))
-print(len(coinc.waves()))
 print(len(noise.waves()))
 sys.exit()
 for wave in coinc.waves():
